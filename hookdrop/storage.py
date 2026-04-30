@@ -1,9 +1,9 @@
 """In-memory storage for captured webhook requests."""
 
+from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional
 import uuid
 from datetime import datetime, timezone
-from dataclasses import dataclass, field
-from typing import Optional
 
 
 @dataclass
@@ -11,64 +11,69 @@ class WebhookRequest:
     id: str
     method: str
     path: str
-    headers: dict
-    query_params: dict
-    body: bytes
-    received_at: datetime
-    content_type: Optional[str] = None
+    headers: Dict[str, str]
+    body: str
+    timestamp: str
+    meta: Dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> dict:
-        return {
-            "id": self.id,
-            "method": self.method,
-            "path": self.path,
-            "headers": dict(self.headers),
-            "query_params": dict(self.query_params),
-            "body": self.body.decode("utf-8", errors="replace"),
-            "received_at": self.received_at.isoformat(),
-            "content_type": self.content_type,
-        }
+
+def to_dict(req: WebhookRequest) -> Dict[str, Any]:
+    return {
+        "id": req.id,
+        "method": req.method,
+        "path": req.path,
+        "headers": req.headers,
+        "body": req.body,
+        "timestamp": req.timestamp,
+        "meta": req.meta,
+    }
 
 
 class RequestStore:
-    """Thread-safe in-memory store for webhook requests."""
+    def __init__(self):
+        self._store: Dict[str, WebhookRequest] = {}
+        self._order: List[str] = []
 
-    def __init__(self, max_size: int = 200):
-        self._requests: list[WebhookRequest] = []
-        self._max_size = max_size
-
-    def save(self, method: str, path: str, headers: dict,
-             query_params: dict, body: bytes) -> WebhookRequest:
-        req = WebhookRequest(
-            id=str(uuid.uuid4()),
-            method=method.upper(),
-            path=path,
-            headers=dict(headers),
-            query_params=dict(query_params),
-            body=body,
-            received_at=datetime.now(timezone.utc),
-            content_type=headers.get("content-type"),
-        )
-        self._requests.append(req)
-        if len(self._requests) > self._max_size:
-            self._requests.pop(0)
+    def save(self, req: WebhookRequest) -> WebhookRequest:
+        self._store[req.id] = req
+        if req.id not in self._order:
+            self._order.append(req.id)
         return req
 
-    def all(self) -> list[WebhookRequest]:
-        return list(reversed(self._requests))
-
     def get(self, request_id: str) -> Optional[WebhookRequest]:
-        return next((r for r in self._requests if r.id == request_id), None)
+        return self._store.get(request_id)
+
+    def all(self) -> List[WebhookRequest]:
+        return [self._store[rid] for rid in self._order if rid in self._store]
 
     def delete(self, request_id: str) -> bool:
-        before = len(self._requests)
-        self._requests = [r for r in self._requests if r.id != request_id]
-        return len(self._requests) < before
+        if request_id in self._store:
+            del self._store[request_id]
+            self._order.remove(request_id)
+            return True
+        return False
 
-    def clear(self) -> int:
-        count = len(self._requests)
-        self._requests.clear()
-        return count
+    def clear(self) -> None:
+        self._store.clear()
+        self._order.clear()
 
-    def __len__(self) -> int:
-        return len(self._requests)
+    def count(self) -> int:
+        return len(self._store)
+
+    def create_and_save(
+        self,
+        method: str,
+        path: str,
+        headers: Dict[str, str],
+        body: str,
+    ) -> WebhookRequest:
+        req = WebhookRequest(
+            id=str(uuid.uuid4()),
+            method=method,
+            path=path,
+            headers=headers,
+            body=body,
+            timestamp=datetime.now(timezone.utc).isoformat(),
+            meta={},
+        )
+        return self.save(req)
