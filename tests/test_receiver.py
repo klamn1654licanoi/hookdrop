@@ -72,6 +72,12 @@ def test_delete_request():
     assert client.get(f"/inspect/{req_id}").status_code == 404
 
 
+def test_delete_missing_request():
+    """Deleting a non-existent request should return 404."""
+    resp = client.delete("/inspect/nonexistent-id")
+    assert resp.status_code == 404
+
+
 def test_clear_all_requests():
     client.post("/hook/a")
     client.post("/hook/b")
