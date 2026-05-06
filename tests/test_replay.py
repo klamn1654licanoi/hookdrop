@@ -86,7 +86,8 @@ def test_replay_request_connection_error(mock_client_cls):
     mock_client.request.side_effect = httpx.RequestError("connection refused")
     mock_client_cls.return_value = mock_client
 
-    result = replay_request(SAMPLE_REQUEST, "http://unreachable.local/")
+    result = replay_request(SAMPLE_REQUEST, "http://example.com/hook")
 
     assert result["status_code"] is None
     assert "connection refused" in result["error"]
+    assert result["request_id"] == "abc-123"
