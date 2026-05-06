@@ -43,3 +43,16 @@ def most_common_path(store: RequestStore) -> str | None:
         return None
     counts = Counter(r.path for r in requests)
     return counts.most_common(1)[0][0]
+
+
+def error_rate(store: RequestStore) -> float | None:
+    """Return the fraction of requests with a 4xx or 5xx status code.
+
+    Returns None if no requests have a recorded status code.
+    Returns a float between 0.0 and 1.0 otherwise.
+    """
+    requests = [r for r in store.all() if r.status_code is not None]
+    if not requests:
+        return None
+    error_count = sum(1 for r in requests if r.status_code >= 400)
+    return error_count / len(requests)
