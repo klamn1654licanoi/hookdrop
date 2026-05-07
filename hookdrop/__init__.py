@@ -1,3 +1,3 @@
-"""hookdrop — Lightweight webhook receiver."""
+"""hookdrop — Lightweight webhook receiver with request inspection, replay, and filtering."""
 
-__version__ = "0.1.0"
+from hookdrop import pipeline  # noqa: F401
