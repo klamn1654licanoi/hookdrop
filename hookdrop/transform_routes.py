@@ -14,6 +14,14 @@ def init_transform_routes(app, store):
             return jsonify({"error": "not found"}), 404
         return jsonify(transform.get_transforms(req))
 
+    @bp.route("/requests/<request_id>/transform", methods=["DELETE"])
+    def clear_transforms(request_id):
+        """Remove all transforms applied to the given request."""
+        req = transform.clear_transforms(store, request_id)
+        if req is None:
+            return jsonify({"error": "not found"}), 404
+        return jsonify(transform.get_transforms(req))
+
     @bp.route("/requests/<request_id>/transform/header", methods=["PUT"])
     def set_header(request_id):
         data = request.get_json(force=True, silent=True) or {}
