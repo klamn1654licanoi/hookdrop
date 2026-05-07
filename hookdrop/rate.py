@@ -45,6 +45,21 @@ def rate_by_path(store: RequestStore, window_seconds: int = 60) -> Dict[str, int
     return dict(counts)
 
 
+def rate_by_status(store: RequestStore, window_seconds: int = 60) -> Dict[int, int]:
+    """Return request counts grouped by HTTP status code within the window.
+
+    Only includes requests that have a numeric status_code attribute.
+    """
+    recent = requests_in_window(store, window_seconds=window_seconds)
+    counts: Dict[int, int] = defaultdict(int)
+    for req in recent:
+        try:
+            counts[int(req.status_code)] += 1
+        except (AttributeError, TypeError, ValueError):
+            continue
+    return dict(counts)
+
+
 def rate_summary(store: RequestStore, window_seconds: int = 60) -> dict:
     """Return a full rate summary for the given time window."""
     recent = requests_in_window(store, window_seconds=window_seconds)
@@ -54,4 +69,5 @@ def rate_summary(store: RequestStore, window_seconds: int = 60) -> dict:
         "per_minute": round(len(recent) * (60 / window_seconds), 2),
         "by_method": rate_by_method(store, window_seconds),
         "by_path": rate_by_path(store, window_seconds),
+        "by_status": rate_by_status(store, window_seconds),
     }
