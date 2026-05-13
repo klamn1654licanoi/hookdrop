@@ -1,3 +1,3 @@
-"""hookdrop — Lightweight webhook receiver with request inspection."""
+"""hookdrop — lightweight webhook receiver."""
 
-__version__ = "0.1.0"
+from hookdrop import timeouts  # noqa: F401
